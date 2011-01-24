@@ -1,24 +1,14 @@
+from django.utils.functional import memoize
+
 from . import app_settings
 
-_render_method = None
 def get_render_method():
-    global _render_method
+    return from_dotted_path(app_settings.EMAIL_RENDER_METHOD)
+get_render_method = memoize(get_render_method, {}, 0)
 
-    if _render_method is None:
-        _render_method = from_dotted_path(app_settings.EMAIL_RENDER_METHOD)
-
-    return _render_method
-
-_context_processors = None
 def get_context_processors():
-    global _context_processors
-
-    if _context_processors is None:
-        _context_processors = [
-            from_dotted_path(x) for x in app_settings.EMAIL_CONTEXT_PROCESSORS
-        ]
-
-    return _context_processors
+    return [from_dotted_path(x) for x in app_settings.EMAIL_CONTEXT_PROCESSORS]
+get_context_processors = memoize(get_context_processors, {}, 0)
 
 def from_dotted_path(fullpath):
     """
