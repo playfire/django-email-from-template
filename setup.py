@@ -13,4 +13,7 @@ setup(
     license='BSD',
 
     packages=find_packages(),
+    package_data={'': [
+        'templates/*/*',
+    ]},
 )
