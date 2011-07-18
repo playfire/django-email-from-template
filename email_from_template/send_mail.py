@@ -256,3 +256,16 @@ def send_mail(recipient_list, template, context=None, from_email=None, *args, **
         mail.attach_alternative(html_message, 'text/html')
 
     return mail.send()
+
+def mail_admins(template, context=None, from_email=None, *args, **kwargs):
+    if from_email is None:
+        from_email = settings.SERVER_EMAIL
+
+    return send_mail(
+        [x[1] for x in settings.ADMINS],
+        template,
+        context,
+        from_email,
+        *args,
+        **kwargs
+    )
