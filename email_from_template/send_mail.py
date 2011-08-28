@@ -160,9 +160,9 @@ context. See the `Context processors` section for more details.
 
 Default: ``django.template.loader.render_to_string``
 
-Method to use to actually render templates. If you are using the `Coffin
-<github.com/cdleary/coffin>_` Jinja2 adaptor for Django, you should set this
-``coffin.template.loader.render_to_string``.
+Method to use to actually render templates. If you are using the
+`Coffin <github.com/cdleary/coffin>_` Jinja2 adaptor for Django,
+you should set this ``coffin.template.loader.render_to_string``.
 
 Installation
 ------------
