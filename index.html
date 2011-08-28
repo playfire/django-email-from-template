@@ -1,0 +1,289 @@
+
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Transitional//EN"
+  "http://www.w3.org/TR/xhtml1/DTD/xhtml1-transitional.dtd">
+
+<html xmlns="http://www.w3.org/1999/xhtml">
+  <head>
+    <meta http-equiv="Content-Type" content="text/html; charset=utf-8" />
+    
+    <title>django-email-from-template — send emails generated entirely from Django templates &mdash; django-email-from-template documentation</title>
+    <link rel="stylesheet" href="_static/nature.css" type="text/css" />
+    <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+    <script type="text/javascript">
+      var DOCUMENTATION_OPTIONS = {
+        URL_ROOT:    '',
+        VERSION:     '',
+        COLLAPSE_INDEX: false,
+        FILE_SUFFIX: '.html',
+        HAS_SOURCE:  true
+      };
+    </script>
+    <script type="text/javascript" src="_static/jquery.js"></script>
+    <script type="text/javascript" src="_static/underscore.js"></script>
+    <script type="text/javascript" src="_static/doctools.js"></script>
+    <link rel="top" title="django-email-from-template documentation" href="#" /> 
+  </head>
+  <body>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             accesskey="I">index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="#">django-email-from-template documentation</a> &raquo;</li> 
+      </ul>
+    </div>  
+
+    <div class="document">
+      <div class="documentwrapper">
+        <div class="bodywrapper">
+          <div class="body">
+            
+  <span class="target" id="module-email_from_template.send_mail"></span><div class="section" id="django-email-from-template-send-emails-generated-entirely-from-django-templates">
+<h1><tt class="xref py py-mod docutils literal"><span class="pre">django-email-from-template</span></tt> &#8212; send emails generated entirely from Django templates<a class="headerlink" href="#django-email-from-template-send-emails-generated-entirely-from-django-templates" title="Permalink to this headline">¶</a></h1>
+<p><tt class="docutils literal"><span class="pre">email_from_template</span></tt> generates and sends mail defined in Django templates to
+avoid presentation layer violations. It has the following features:</p>
+<blockquote>
+<div><ul class="simple">
+<li>HTML email support</li>
+<li>Context processor system</li>
+<li>Support for non-Django template rendering systems</li>
+</ul>
+</div></blockquote>
+<p>Whilst Django  provides a comprehensive mail framework that simplifies the
+sending mechanics of email, the typical use of it is often ugly and results in
+unnecessary and complicated string formatting inside views:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">django.core.mail</span> <span class="kn">import</span> <span class="n">send_mail</span>
+<span class="kn">from</span> <span class="nn">django.core.urlresolvers</span> <span class="kn">import</span> <span class="n">reverse</span>
+<span class="kn">from</span> <span class="nn">django.contrib.sites.models</span> <span class="kn">import</span> <span class="n">Site</span>
+
+<span class="c"># Shouldn&#39;t be in views.py</span>
+<span class="n">send_mail</span><span class="p">(</span>
+    <span class="s">&#39;Hi </span><span class="si">%s</span><span class="s">, </span><span class="si">%d</span><span class="s"> </span><span class="si">%s</span><span class="s"> written on your wall&#39;</span> <span class="o">%</span> <span class="p">(</span>
+        <span class="n">user</span><span class="o">.</span><span class="n">username</span><span class="p">,</span>
+        <span class="n">num_posts</span> <span class="o">&gt;</span> <span class="mi">1</span> <span class="ow">and</span> <span class="s">&#39;people have&#39;</span> <span class="ow">or</span> <span class="s">&#39;person has&#39;</span><span class="p">,</span>
+    <span class="p">),</span>
+    <span class="s">&#39;Hi </span><span class="si">%s</span><span class="se">\n\n</span><span class="s">Check out what they wrote here:</span><span class="se">\n\n</span><span class="s"> </span><span class="si">%s%s</span><span class="se">\n\n</span><span class="s">&#39;</span> <span class="o">%</span> <span class="p">(</span>
+        <span class="n">user</span><span class="o">.</span><span class="n">username</span><span class="p">,</span>
+        <span class="n">Site</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get_current</span><span class="p">(),</span><span class="n">url</span><span class="p">,</span>
+        <span class="n">reverse</span><span class="p">(</span><span class="s">&#39;profile:view&#39;</span><span class="p">,</span> <span class="n">args</span><span class="o">=</span><span class="p">(</span><span class="n">user</span><span class="o">.</span><span class="n">username</span><span class="p">,)),</span>
+    <span class="p">),</span>
+    <span class="s">&#39;from@example.com&#39;</span><span class="p">,</span>
+    <span class="p">[</span><span class="n">user</span><span class="o">.</span><span class="n">email</span><span class="p">],</span>
+    <span class="n">fail_silently</span><span class="o">=</span><span class="bp">False</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<p>With <tt class="xref py py-mod docutils literal"><span class="pre">django-email-from-template</span></tt>, you can relegate all this formatting to
+the presentation layer as well as leverage any existing templatetags and
+filters. First we define our template:</p>
+<div class="highlight-python"><pre>{% extends email_from_template %}
+
+{% block subject %}
+Hi {{ user.username }}, {{ num_posts }} {{ num_posts|pluralize:"person has,people have" }} written on your wall
+{% endblock %}
+
+{% block body %}
+Hi {{ user.username }}.
+
+Check out what they wrote here:
+
+  {{ site.url }}{% url profile:view user.username %}
+{% endblock %}</pre>
+</div>
+<p>We then simply call our template-aware version of <tt class="docutils literal"><span class="pre">send_mail</span></tt> with the
+appropriate context:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="kn">from</span> <span class="nn">email_from_template</span> <span class="kn">import</span> <span class="n">send_mail</span>
+
+<span class="n">send_mail</span><span class="p">([</span><span class="n">user</span><span class="o">.</span><span class="n">email</span><span class="p">],</span> <span class="s">&#39;path/to/my_email.email&#39;</span><span class="p">,</span> <span class="p">{</span>
+    <span class="s">&#39;user&#39;</span><span class="p">:</span> <span class="n">user</span><span class="p">,</span>
+    <span class="s">&#39;num_posts&#39;</span><span class="p">:</span> <span class="n">num_posts</span><span class="p">,</span>
+<span class="p">},</span> <span class="s">&#39;from@email.com&#39;</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Now your views are not cluttered with unnecessary presentation logic.</p>
+<p>For HTML-enabled mail readers, we can optionally include suitable content
+within a &#8220;html&#8221; block:</p>
+<div class="highlight-python"><pre>{% block html %}
+&lt;p&gt;Hi &lt;strong&gt;{{ user.username }}&lt;/strong&gt;&lt;/p&gt;
+&lt;p&gt;Check out what they wrote here:&lt;/p&gt;
+&lt;a href="{{ site.url }}{% url profile:view user.username %}"&gt;
+    {{ site.url }}{% url profile:view user.username %}
+&lt;/a&gt;
+{% endblock %}</pre>
+</div>
+<div class="section" id="context-processors">
+<h2>Context processors<a class="headerlink" href="#context-processors" title="Permalink to this headline">¶</a></h2>
+<p>The <tt class="docutils literal"><span class="pre">EMAIL_CONTEXT_PROCESSORS</span></tt> setting is a tuple of callables that return a
+dictionary of items to merged into the email context. It is identical to the
+functionality of Django&#8217;s regular <tt class="docutils literal"><span class="pre">TEMPLATE_CONTEXT_PROCESSORS</span></tt> support
+except that the callables do not take a request object.</p>
+<p>By default, <tt class="docutils literal"><span class="pre">EMAIL_CONTEXT_PROCESSORS</span></tt> is set to:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="p">(</span>
+    <span class="s">&#39;email_from_template.context_processors.debug&#39;</span><span class="p">,</span>
+    <span class="s">&#39;email_from_template.context_processors.django_settings&#39;</span><span class="p">,</span>
+<span class="p">)</span>
+</pre></div>
+</div>
+<div class="section" id="debug">
+<h3><tt class="docutils literal"><span class="pre">debug</span></tt><a class="headerlink" href="#debug" title="Permalink to this headline">¶</a></h3>
+<p>Module: <tt class="docutils literal"><span class="pre">email_from_template.context_processors.debug</span></tt>
+Enabled by default: <tt class="xref docutils literal"><span class="pre">True</span></tt></p>
+<p>Sets <tt class="docutils literal"><span class="pre">debug</span></tt> in the template context to the value of <tt class="docutils literal"><span class="pre">settings.DEBUG</span></tt>:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">def</span> <span class="nf">debug</span><span class="p">():</span>
+    <span class="kn">from</span> <span class="nn">django.conf</span> <span class="kn">import</span> <span class="n">settings</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s">&#39;debug&#39;</span><span class="p">:</span> <span class="n">settings</span><span class="o">.</span><span class="n">DEBUG</span><span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="django-settings">
+<h3><tt class="docutils literal"><span class="pre">django_settings</span></tt><a class="headerlink" href="#django-settings" title="Permalink to this headline">¶</a></h3>
+<p>Module: <tt class="docutils literal"><span class="pre">email_from_template.context_processors.django_settings</span></tt>
+Enabled by default: <tt class="xref docutils literal"><span class="pre">True</span></tt></p>
+<p>Sets <tt class="docutils literal"><span class="pre">settings</span></tt> in the template context to the value of Django&#8217;s settings
+object, <tt class="docutils literal"><span class="pre">django.conf.settings</span></tt>:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">def</span> <span class="nf">django_settings</span><span class="p">():</span>
+    <span class="kn">from</span> <span class="nn">django.conf</span> <span class="kn">import</span> <span class="n">settings</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s">&#39;settings&#39;</span><span class="p">:</span> <span class="n">settings</span><span class="p">}</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="site">
+<h3><tt class="docutils literal"><span class="pre">site</span></tt><a class="headerlink" href="#site" title="Permalink to this headline">¶</a></h3>
+<p>Module: <tt class="docutils literal"><span class="pre">email_from_template.context_processors.site</span></tt>
+Enabled by default: <tt class="xref docutils literal"><span class="pre">False</span></tt></p>
+<p>Sets <tt class="docutils literal"><span class="pre">site</span></tt> in the template context to the value of the current
+<tt class="docutils literal"><span class="pre">django.contrib.sites</span></tt> <tt class="docutils literal"><span class="pre">Site</span></tt> instance:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">def</span> <span class="nf">site</span><span class="p">():</span>
+    <span class="kn">from</span> <span class="nn">django.contrib.sites.models</span> <span class="kn">import</span> <span class="n">Site</span>
+    <span class="k">return</span> <span class="p">{</span><span class="s">&#39;site&#39;</span><span class="p">:</span> <span class="n">Site</span><span class="o">.</span><span class="n">objects</span><span class="o">.</span><span class="n">get_current</span><span class="p">()}</span>
+</pre></div>
+</div>
+</div>
+<div class="section" id="i18n">
+<h3><tt class="docutils literal"><span class="pre">i18n</span></tt><a class="headerlink" href="#i18n" title="Permalink to this headline">¶</a></h3>
+<p>Module: <tt class="docutils literal"><span class="pre">email_from_template.context_processors.i18n</span></tt>
+Enabled by default: <tt class="xref docutils literal"><span class="pre">False</span></tt></p>
+<p>Includes <tt class="docutils literal"><span class="pre">LANGUAGES</span></tt>, <tt class="docutils literal"><span class="pre">LANGUAGE_CODE</span></tt> and <tt class="docutils literal"><span class="pre">LANGUAGE_BIDI</span></tt> in the template
+context. This email context processor is parallel to the
+<tt class="docutils literal"><span class="pre">django.core.context_processors.i18n</span></tt> template context processor:</p>
+<div class="highlight-python"><div class="highlight"><pre><span class="k">def</span> <span class="nf">i18n</span><span class="p">():</span>
+    <span class="kn">from</span> <span class="nn">django.utils</span> <span class="kn">import</span> <span class="n">translation</span>
+    <span class="k">return</span> <span class="p">{</span>
+        <span class="s">&#39;LANGUAGES&#39;</span><span class="p">:</span> <span class="n">settings</span><span class="o">.</span><span class="n">LANGUAGES</span><span class="p">,</span>
+        <span class="s">&#39;LANGUAGE_CODE&#39;</span><span class="p">:</span> <span class="n">translation</span><span class="o">.</span><span class="n">get_language</span><span class="p">(),</span>
+        <span class="s">&#39;LANGUAGE_BIDI&#39;</span><span class="p">:</span> <span class="n">translation</span><span class="o">.</span><span class="n">get_language_bidi</span><span class="p">(),</span>
+    <span class="p">}</span>
+</pre></div>
+</div>
+</div>
+</div>
+<div class="section" id="configuration">
+<h2>Configuration<a class="headerlink" href="#configuration" title="Permalink to this headline">¶</a></h2>
+<div class="section" id="email-context-processors">
+<h3><tt class="docutils literal"><span class="pre">EMAIL_CONTEXT_PROCESSORS</span></tt><a class="headerlink" href="#email-context-processors" title="Permalink to this headline">¶</a></h3>
+<p>A tuple of callables that return a dictionary of items to merged into the email
+context. See the <cite>Context processors</cite> section for more details.</p>
+</div>
+<div class="section" id="email-render-method">
+<h3><tt class="docutils literal"><span class="pre">EMAIL_RENDER_METHOD</span></tt><a class="headerlink" href="#email-render-method" title="Permalink to this headline">¶</a></h3>
+<p>Default: <tt class="docutils literal"><span class="pre">django.template.loader.render_to_string</span></tt></p>
+<p>Method to use to actually render templates. If you are using the
+<a class="reference external" href="github.com/cdleary/coffin">Coffin</a> Jinja2 adaptor for Django,
+you should set this <tt class="docutils literal"><span class="pre">coffin.template.loader.render_to_string</span></tt>.</p>
+</div>
+</div>
+<div class="section" id="installation">
+<h2>Installation<a class="headerlink" href="#installation" title="Permalink to this headline">¶</a></h2>
+<p>Add <tt class="docutils literal"><span class="pre">email_from_template</span></tt> to your <tt class="docutils literal"><span class="pre">INSTALLED_APPS</span></tt>:</p>
+<div class="highlight-python"><pre>INSTALLED_APPS = (
+    ...
+    'email_from_template',
+    ...
+)</pre>
+</div>
+</div>
+<div class="section" id="links">
+<h2>Links<a class="headerlink" href="#links" title="Permalink to this headline">¶</a></h2>
+<dl class="docutils">
+<dt>View/download code</dt>
+<dd><a class="reference external" href="https://github.com/playfire/django-email-from-template">https://github.com/playfire/django-email-from-template</a></dd>
+<dt>File a bug</dt>
+<dd><a class="reference external" href="https://github.com/playfire/django-email-from-template/issues">https://github.com/playfire/django-email-from-template/issues</a></dd>
+</dl>
+</div>
+</div>
+
+
+          </div>
+        </div>
+      </div>
+      <div class="sphinxsidebar">
+        <div class="sphinxsidebarwrapper">
+            <p class="logo"><a href="#">
+              <img class="logo" src="_static/playfire.png" alt="Logo"/>
+            </a></p>
+  <h3><a href="#">Table Of Contents</a></h3>
+  <ul>
+<li><a class="reference internal" href="#"><tt class="docutils literal"><span class="pre">django-email-from-template</span></tt> &#8212; send emails generated entirely from Django templates</a><ul>
+<li><a class="reference internal" href="#context-processors">Context processors</a><ul>
+<li><a class="reference internal" href="#debug"><tt class="docutils literal"><span class="pre">debug</span></tt></a></li>
+<li><a class="reference internal" href="#django-settings"><tt class="docutils literal"><span class="pre">django_settings</span></tt></a></li>
+<li><a class="reference internal" href="#site"><tt class="docutils literal"><span class="pre">site</span></tt></a></li>
+<li><a class="reference internal" href="#i18n"><tt class="docutils literal"><span class="pre">i18n</span></tt></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#configuration">Configuration</a><ul>
+<li><a class="reference internal" href="#email-context-processors"><tt class="docutils literal"><span class="pre">EMAIL_CONTEXT_PROCESSORS</span></tt></a></li>
+<li><a class="reference internal" href="#email-render-method"><tt class="docutils literal"><span class="pre">EMAIL_RENDER_METHOD</span></tt></a></li>
+</ul>
+</li>
+<li><a class="reference internal" href="#installation">Installation</a></li>
+<li><a class="reference internal" href="#links">Links</a></li>
+</ul>
+</li>
+</ul>
+
+  <h3>This Page</h3>
+  <ul class="this-page-menu">
+    <li><a href="_sources/index.txt"
+           rel="nofollow">Show Source</a></li>
+  </ul>
+<div id="searchbox" style="display: none">
+  <h3>Quick search</h3>
+    <form class="search" action="search.html" method="get">
+      <input type="text" name="q" size="18" />
+      <input type="submit" value="Go" />
+      <input type="hidden" name="check_keywords" value="yes" />
+      <input type="hidden" name="area" value="default" />
+    </form>
+    <p class="searchtip" style="font-size: 90%">
+    Enter search terms or a module, class or function name.
+    </p>
+</div>
+<script type="text/javascript">$('#searchbox').show(0);</script>
+        </div>
+      </div>
+      <div class="clearer"></div>
+    </div>
+    <div class="related">
+      <h3>Navigation</h3>
+      <ul>
+        <li class="right" style="margin-right: 10px">
+          <a href="genindex.html" title="General Index"
+             >index</a></li>
+        <li class="right" >
+          <a href="py-modindex.html" title="Python Module Index"
+             >modules</a> |</li>
+        <li><a href="#">django-email-from-template documentation</a> &raquo;</li> 
+      </ul>
+    </div>
+    <div class="footer">
+        &copy; Copyright 2010, 2011 UUMC Ltd..
+      Created using <a href="http://sphinx.pocoo.org/">Sphinx</a> 1.0.7.
+    </div>
+  </body>
+</html>
