@@ -243,7 +243,7 @@ def send_mail(recipient_list, template, context=None, from_email=None, *args, **
     ))
 
     mail = EmailMultiAlternatives(
-        render('subject'),
+        render('subject').split('\n')[0],
         render('body'),
         from_email,
         recipient_list,
