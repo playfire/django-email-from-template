@@ -192,7 +192,7 @@ from django.core.mail.message import EmailMultiAlternatives
 
 from .utils import get_render_method, get_context_processors
 
-def send_mail(recipient_list, template, context=None, from_email=None, *args, **kwargs):
+def send_mail(recipient_list, template, context=None, from_email=None, send_mail=True, *args, **kwargs):
     """
     Wrapper around ``django.core.mail.send_mail`` that generates the subject
     and message body from a template.
@@ -254,6 +254,9 @@ def send_mail(recipient_list, template, context=None, from_email=None, *args, **
     html_message = render('html', fail_silently=True)
     if html_message:
         mail.attach_alternative(html_message, 'text/html')
+
+    if not send_mail:
+        return mail
 
     return mail.send()
 
